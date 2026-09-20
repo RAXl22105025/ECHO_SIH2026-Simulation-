@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROJECT ECHO // Tactical Infrasound Array & Threat Localization (SIH26144)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            tacticalDarkBg: '#05070A',
+            tacticalSurface: '#0A0E17',
+            tacticalSurfaceElevated: '#111827',
+            tacticalBorder: '#1E293B',
+            tacticalBorderBright: '#334155',
+            cyanTelemetry: '#00F2FE',
+            cyanGlow: 'rgba(0, 242, 254, 0.15)',
+            emeraldTelemetry: '#10B981',
+            roseAlert: '#EF4444',
+            roseGlow: 'rgba(239, 68, 68, 0.18)',
+            amberWarning: '#F59E0B',
+            purpleSpectrum: '#8B5CF6'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #05070A;
+      color: #F8FAFC;
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* CRT Scanline & grid aesthetic */
+    .crt-grid {
+      background-size: 20px 20px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 242, 254, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 242, 254, 0.04) 1px, transparent 1px);
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .animate-pulse-glow {
+      animation: pulse-glow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-tacticalDarkBg text-slate-100 flex flex-col antialiased selection:bg-cyan-500/30 selection:text-cyan-300">
+
+  <!-- Top Tactical Bar -->
+  <header class="border-b border-tacticalBorder bg-tacticalSurface/90 backdrop-blur sticky top-0 z-50 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Title & Live Status -->
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm md:text-base font-bold font-mono tracking-wider text-white">PROJECT ECHO // INFRASOUND ARRAY</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-400 border border-cyan-500/40">SIH26144</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono">Self-Localizing Infrasound Sensor Network & Threat Localization</p>
+        </div>
+      </div>
+
+      <!-- Telemetry Status Pills -->
+      <div class="flex flex-wrap items-center gap-2 font-mono text-[10px]">
+        <div class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700/80 flex items-center gap-1.5 text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          GPS-PPS: <span class="text-emerald-400 font-bold">&plusmn;0.4&mu;s LOCK</span>
+        </div>
+        <div class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700/80 flex items-center gap-1.5 text-slate-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+          LORA MESH: <span class="text-cyan-400 font-bold">868 MHz ACTIVE</span>
+        </div>
+        <div class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700/80 flex items-center gap-1.5 text-slate-300">
+          POKHRAN: <span class="text-amber-400 font-bold">27.02&deg;N, 71.75&deg;E</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-1 ml-2">
+          <button id="btn-toggle-sim" class="px-3 py-1 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/50 font-bold transition">
+            PAUSE
+          </button>
+          <button id="btn-speed-toggle" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition">
+            1X SPEED
+          </button>
+          <button id="btn-reset-sim" class="px-2.5 py-1 rounded bg-slate-800 text-rose-300 hover:bg-rose-950/30 border border-slate-700 transition">
+            RESET
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full p-4 space-y-4 flex-1">
+
+    <!-- 1. Event Injector & Configuration Bar -->
+    <section class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <h2 class="text-xs font-bold font-mono text-slate-200 tracking-wider">TACTICAL EVENT INJECTOR (SIH ATMOSPHERIC SCENARIOS)</h2>
+        </div>
+        <span class="text-[11px] font-mono text-slate-400">ACTIVE: <span id="current-event-label" class="text-cyan-400 font-bold">SURFACE EXPLOSION</span></span>
+      </div>
+
+      <!-- Injection Buttons -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 font-mono text-xs mb-4">
+        <button onclick="injectScenario('SURFACE_EXPLOSION')" class="scenario-btn p-2.5 rounded-lg border border-rose-500/60 bg-rose-500/10 hover:bg-rose-500/20 text-left transition" data-id="SURFACE_EXPLOSION">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-rose-400">Blast / Explosion</span>
+            <span class="text-[9px] px-1 bg-rose-950 rounded text-rose-300 border border-rose-800">NTRO</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Impulsive shock &lt;1.5Hz</p>
+        </button>
+
+        <button onclick="injectScenario('ROCKET_LAUNCH')" class="scenario-btn p-2.5 rounded-lg border border-slate-800 bg-slate-900 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-left transition" data-id="ROCKET_LAUNCH">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-cyan-400">Rocket Launch</span>
+            <span class="text-[9px] px-1 bg-cyan-950 rounded text-cyan-300 border border-cyan-800">ISRO</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Rising Chirp 0.5-4.0Hz</p>
+        </button>
+
+        <button onclick="injectScenario('STORM_FRONT')" class="scenario-btn p-2.5 rounded-lg border border-slate-800 bg-slate-900 hover:border-amber-500/50 hover:bg-amber-500/10 text-left transition" data-id="STORM_FRONT">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-400">Severe Storm</span>
+            <span class="text-[9px] px-1 bg-amber-950 rounded text-amber-300 border border-amber-800">IMD</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Microbaroms 0.1-0.3Hz</p>
+        </button>
+
+        <button onclick="injectScenario('LANDSLIDE')" class="scenario-btn p-2.5 rounded-lg border border-slate-800 bg-slate-900 hover:border-purple-500/50 hover:bg-purple-500/10 text-left transition" data-id="LANDSLIDE">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-purple-400">Landslide</span>
+            <span class="text-[9px] px-1 bg-purple-950 rounded text-purple-300 border border-purple-800">NDMA</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Broadband Rumble 1-8Hz</p>
+        </button>
+
+        <button onclick="injectScenario('AMBIENT_BASELINE')" class="scenario-btn p-2.5 rounded-lg border border-slate-800 bg-slate-900 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-left transition" data-id="AMBIENT_BASELINE">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-400">Ambient Baseline</span>
+            <span class="text-[9px] px-1 bg-emerald-950 rounded text-emerald-300 border border-emerald-800">IDLE</span>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Pink Noise &lt;5 mPa</p>
+        </button>
+      </div>
+
+      <!-- Controls Slider -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-tacticalBorder font-mono text-xs">
+        <div>
+          <div class="flex justify-between text-slate-400 mb-1">
+            <span>STA/LTA Trigger Threshold:</span>
+            <span id="threshold-val" class="text-amber-400 font-bold">3.80</span>
+          </div>
+          <input id="slider-threshold" type="range" min="2.0" max="7.0" step="0.1" value="3.8" class="w-full accent-amber-400 cursor-pointer">
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-400 mb-1">
+            <span>Wind Turbulence Noise Gain:</span>
+            <span id="wind-val" class="text-cyan-400 font-bold">1.0x</span>
+          </div>
+          <input id="slider-wind" type="range" min="0.2" max="2.5" step="0.1" value="1.0" class="w-full accent-cyan-400 cursor-pointer">
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Tri-Node Sensor Array Status Grid -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
+      <!-- Node Alpha -->
+      <div class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-3.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between border-b border-tacticalBorder pb-2 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            <span class="font-bold text-cyan-400">NODE ALPHA [MASTER]</span>
+          </div>
+          <span class="text-[10px] text-slate-400">0.0 km, +6.0 km</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300 mb-2">
+          <div>Batt: <span class="text-emerald-400 font-bold" id="node-a-batt">3.38 V (94%)</span></div>
+          <div>Solar: <span class="text-amber-400 font-bold" id="node-a-solar">4.8 W</span></div>
+          <div>Temp: <span class="text-slate-200" id="node-a-temp">28.4 &deg;C</span></div>
+          <div>Delay: <span class="text-cyan-400 font-bold" id="node-a-delay">+0.0 ms</span></div>
+        </div>
+        <div class="text-[10px] text-slate-400 flex justify-between border-t border-tacticalBorder pt-1.5">
+          <span>LoRa: <span class="text-emerald-400">-78 dBm</span></span>
+          <span>Coherence: <span class="text-cyan-400 font-bold">0.98</span></span>
+        </div>
+      </div>
+
+      <!-- Node Bravo -->
+      <div class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-3.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between border-b border-tacticalBorder pb-2 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span class="font-bold text-emerald-400">NODE BRAVO</span>
+          </div>
+          <span class="text-[10px] text-slate-400">+5.5 km, -3.5 km</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300 mb-2">
+          <div>Batt: <span class="text-emerald-400 font-bold" id="node-b-batt">3.35 V (90%)</span></div>
+          <div>Solar: <span class="text-amber-400 font-bold" id="node-b-solar">4.5 W</span></div>
+          <div>Temp: <span class="text-slate-200" id="node-b-temp">29.1 &deg;C</span></div>
+          <div>Delay: <span class="text-cyan-400 font-bold" id="node-b-delay">+24.2 ms</span></div>
+        </div>
+        <div class="text-[10px] text-slate-400 flex justify-between border-t border-tacticalBorder pt-1.5">
+          <span>LoRa: <span class="text-emerald-400">-82 dBm</span></span>
+          <span>Coherence: <span class="text-cyan-400 font-bold">0.97</span></span>
+        </div>
+      </div>
+
+      <!-- Node Charlie -->
+      <div class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-3.5 flex flex-col justify-between">
+        <div class="flex items-center justify-between border-b border-tacticalBorder pb-2 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span class="font-bold text-sky-400">NODE CHARLIE</span>
+          </div>
+          <span class="text-[10px] text-slate-400">-5.5 km, -3.5 km</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300 mb-2">
+          <div>Batt: <span class="text-emerald-400 font-bold" id="node-c-batt">3.32 V (87%)</span></div>
+          <div>Solar: <span class="text-amber-400 font-bold" id="node-c-solar">4.2 W</span></div>
+          <div>Temp: <span class="text-slate-200" id="node-c-temp">29.6 &deg;C</span></div>
+          <div>Delay: <span class="text-cyan-400 font-bold" id="node-c-delay">+18.6 ms</span></div>
+        </div>
+        <div class="text-[10px] text-slate-400 flex justify-between border-t border-tacticalBorder pt-1.5">
+          <span>LoRa: <span class="text-emerald-400">-85 dBm</span></span>
+          <span>Coherence: <span class="text-cyan-400 font-bold">0.96</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Dual-Trace Infrasound Oscilloscope Canvas -->
+    <section class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2 font-mono">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+          <h3 class="text-xs font-bold text-slate-200 tracking-wider">DUAL-TRACE INFRASOUND OSCILLOSCOPE (100 Sa/s)</h3>
+        </div>
+        <div class="flex items-center gap-1.5 text-[10px]">
+          <button onclick="setScopeMode('DUAL')" id="scope-btn-dual" class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500 font-bold">DUAL</button>
+          <button onclick="setScopeMode('RAW')" id="scope-btn-raw" class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700">CH1 RAW</button>
+          <button onclick="setScopeMode('FILT')" id="scope-btn-filt" class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700">CH2 FILT</button>
+        </div>
+      </div>
+
+      <!-- Scope Telemetry Readout Bar -->
+      <div class="bg-tacticalDarkBg rounded p-2 border border-slate-800 flex flex-wrap items-center justify-between text-[11px] font-mono mb-2">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-sm bg-rose-500"></span>
+          <span class="text-rose-400 font-bold">CH1 RAW (Patm): <span id="val-raw-pa">+0.12 Pa</span></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-sm bg-cyan-400"></span>
+          <span class="text-cyan-400 font-bold">CH2 COHERENT (Pinf): <span id="val-filt-mpa">+12.4 mPa</span></span>
+        </div>
+        <div class="text-slate-400 text-[10px]">
+          100 Sa/s | 200 ms/DIV | &plusmn;2.5 Pa / &plusmn;50 mPa
+        </div>
+      </div>
+
+      <!-- Oscilloscope Canvas Box -->
+      <div class="relative w-full h-48 bg-[#040810] rounded-lg border border-slate-800 overflow-hidden crt-grid">
+        <canvas id="oscilloscopeCanvas" class="w-full h-full block"></canvas>
+        <div id="scope-trigger-badge" class="hidden absolute top-2 right-2 px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500 text-rose-400 font-mono text-[10px] font-bold animate-pulse">
+          STA/LTA TRIGGER DETECTED
+        </div>
+        <div class="absolute bottom-1 left-2 font-mono text-[9px] text-slate-500">
+          -2.5 Pa / -50 mPa
+        </div>
+        <div class="absolute top-1 left-2 font-mono text-[9px] text-slate-500">
+          +2.5 Pa / +50 mPa
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Gauges & Welch PSD Spectrum Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- STA/LTA Ratio Gauge -->
+      <section class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-3 font-mono">
+            <h3 class="text-xs font-bold text-slate-200 tracking-wider">STA/LTA TRIGGER RATIO</h3>
+            <span id="stalta-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">STANDBY [&lt; 3.8]</span>
+          </div>
+
+          <div class="flex items-center justify-center my-3">
+            <div class="relative flex flex-col items-center">
+              <svg class="w-36 h-24" viewBox="0 0 140 90">
+                <!-- Arc background -->
+                <path d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="#1E293B" stroke-width="12" stroke-linecap="round"/>
+                <!-- Colored arc -->
+                <path id="stalta-arc" d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="url(#staltaGradient)" stroke-width="12" stroke-linecap="round" stroke-dasharray="172" stroke-dashoffset="130"/>
+                <defs>
+                  <linearGradient id="staltaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10B981" />
+                    <stop offset="50%" stop-color="#F59E0B" />
+                    <stop offset="100%" stop-color="#EF4444" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute bottom-1 text-center font-mono">
+                <span id="stalta-num" class="text-2xl font-black text-slate-100">1.45</span>
+                <span class="block text-[9px] text-slate-400">RATIO</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 border-t border-tacticalBorder pt-2 font-mono text-[11px]">
+          <div class="flex justify-between text-slate-400"><span>STA Window:</span> <span class="text-slate-200">150 ms (15 Sa)</span></div>
+          <div class="flex justify-between text-slate-400"><span>LTA Window:</span> <span class="text-slate-200">1.5 s (150 Sa)</span></div>
+          <div class="flex justify-between text-slate-400"><span>Threshold Delta:</span> <span id="stalta-delta" class="text-emerald-400 font-bold">-2.35 (SAFE)</span></div>
+        </div>
+      </section>
+
+      <!-- Welch PSD Power Spectrum (2 columns wide) -->
+      <section class="md:col-span-2 bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2 font-mono">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <h3 class="text-xs font-bold text-slate-200 tracking-wider">WELCH PSD POWER SPECTRUM (0.01 - 20.0 Hz)</h3>
+            </div>
+            <div id="psd-peak-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
+              PEAK: 1.20 Hz (+34.2 dB)
+            </div>
+          </div>
+
+          <!-- Canvas PSD -->
+          <div class="relative w-full h-36 bg-[#040810] rounded-lg border border-slate-800 overflow-hidden">
+            <canvas id="psdCanvas" class="w-full h-full block"></canvas>
+            <div class="absolute bottom-1 inset-x-2 flex justify-between font-mono text-[9px] text-slate-400 pointer-events-none">
+              <span>0.01 Hz</span>
+              <span>0.1 Hz</span>
+              <span>1.0 Hz</span>
+              <span>5.0 Hz</span>
+              <span>10 Hz</span>
+              <span>20 Hz</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-tacticalBorder">
+          <span>Acoustic Passband: 0.01 Hz - 20.0 Hz</span>
+          <span>Window: Hanning (50% overlap)</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- 5. Tactical Geospatial TDOA Radar Map -->
+    <section class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2 font-mono">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-8a1 1 0 112 0 1 1 0 01-2 0z"/></svg>
+          <h3 class="text-xs font-bold text-slate-200 tracking-wider">TACTICAL GEOSPATIAL TDOA MAP (&plusmn;25 KM VIEWPORT)</h3>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          Click or Tap map to relocate threat epicenter
+        </div>
+      </div>
+
+      <!-- TDOA Delay readout -->
+      <div class="bg-tacticalDarkBg rounded p-2 border border-slate-800 flex flex-wrap items-center justify-between text-[11px] font-mono mb-2">
+        <div class="text-cyan-400 font-bold">&Delta;t(A-B): <span id="radar-dt-ab">+24.2 ms</span></div>
+        <div class="text-emerald-400 font-bold">&Delta;t(A-C): <span id="radar-dt-ac">+18.6 ms</span></div>
+        <div class="text-amber-400 font-bold">ESTIMATED BEARING: <span id="radar-bearing">045&deg;</span></div>
+        <div class="text-slate-300 font-bold">CONFIDENCE CEP: <span id="radar-cep">420 m</span></div>
+      </div>
+
+      <!-- Map Radar Canvas -->
+      <div class="relative w-full h-80 bg-[#040810] rounded-lg border border-slate-800 overflow-hidden cursor-crosshair">
+        <canvas id="radarCanvas" class="w-full h-full block"></canvas>
+        <!-- Compass -->
+        <div class="absolute top-2 right-2 w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex flex-col items-center justify-center font-mono text-[9px] font-bold text-rose-400">
+          <span>&uarr;</span>
+          <span>N</span>
+        </div>
+        <!-- Legend Overlay -->
+        <div class="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur px-2.5 py-1.5 rounded border border-slate-800 text-[10px] font-mono space-y-0.5">
+          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> <span>Node Alpha (0.0, +6.0 km)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> <span>Node Bravo (+5.5, -3.5 km)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-sky-400"></span> <span>Node Charlie (-5.5, -3.5 km)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> <span>Threat Epicenter & CEP Circle</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Verified Threats & Alerts Log Table -->
+    <section class="bg-tacticalSurface rounded-xl border border-tacticalBorder p-4 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <h3 class="text-xs font-bold font-mono text-slate-200 tracking-wider">VERIFIED THREAT & EVENT LOG</h3>
+          <span id="alerts-count-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-400 border border-rose-800">4 DETECTIONS</span>
+        </div>
+
+        <!-- Export & Filters -->
+        <div class="flex items-center gap-2 font-mono text-xs">
+          <button onclick="exportAlerts('json')" class="px-2.5 py-1 rounded bg-slate-900 border border-cyan-500 text-cyan-400 font-bold hover:bg-cyan-950/40 transition">
+            EXPORT JSON
+          </button>
+          <button onclick="exportAlerts('csv')" class="px-2.5 py-1 rounded bg-slate-900 border border-emerald-500 text-emerald-400 font-bold hover:bg-emerald-950/40 transition">
+            EXPORT CSV
+          </button>
+          <button onclick="clearAlerts()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-400 hover:text-rose-400 transition">
+            CLEAR
+          </button>
+        </div>
+      </div>
+
+      <!-- Alerts Table -->
+      <div class="overflow-x-auto border border-tacticalBorder rounded-lg">
+        <table class="w-full text-left font-mono text-xs">
+          <thead class="bg-tacticalDarkBg text-slate-400 border-b border-tacticalBorder text-[10px]">
+            <tr>
+              <th class="p-2.5">TIME (UTC+5:30)</th>
+              <th class="p-2.5">CLASSIFICATION</th>
+              <th class="p-2.5">AGENCY</th>
+              <th class="p-2.5">AMPLITUDE</th>
+              <th class="p-2.5">STA/LTA</th>
+              <th class="p-2.5">AZIMUTH</th>
+              <th class="p-2.5">CONFIDENCE (CEP)</th>
+              <th class="p-2.5">&Delta;t (AB/AC)</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-table-body" class="divide-y divide-tacticalBorder text-slate-200">
+            <!-- Dynamic entries generated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-tacticalBorder bg-tacticalSurface py-3 px-4 text-center font-mono text-[11px] text-slate-500">
+    PROJECT ECHO // Smart India Hackathon 2026 (SIH26144) &bull; Standalone Web Edition Ready for GitHub Pages / Vercel Deploy
+  </footer>
+
+  <!-- Simulation Logic & Canvas Render Script -->
+  <script>
+    // --- State & Mathematical Engine ---
+    const SOUND_SPEED = 343.0; // m/s
+    let isRunning = true;
+    let simSpeed = 1.0;
+    let threshold = 3.8;
+    let windNoiseGain = 1.0;
+    let scopeMode = 'DUAL';
+
+    let currentEvent = 'SURFACE_EXPLOSION';
+    let simTime = 0.0;
+    let eventTime = 0.0;
+    let isTriggered = false;
+
+    // Acoustic source coordinates in km (tapped on map)
+    let sourceXKm = 6.8;
+    let sourceYKm = 8.4;
+    let wavefrontRadiusKm = 0.0;
+
+    // Sensor Nodes Geometry (Equilateral 15.8km aperture around Pokhran)
+    const nodes = [
+      { id: "ALPHA", name: "NODE ALPHA [MASTER]", xKm: 0.0, yKm: 6.0, color: "#00F2FE", batt: 3.38, solar: 4.8, temp: 28.4, delay: 0.0 },
+      { id: "BRAVO", name: "NODE BRAVO", xKm: 5.5, yKm: -3.5, color: "#10B981", batt: 3.35, solar: 4.5, temp: 29.1, delay: 0.0 },
+      { id: "CHARLIE", name: "NODE CHARLIE", xKm: -5.5, yKm: -3.5, color: "#38BDF8", batt: 3.32, solar: 4.2, temp: 29.6, delay: 0.0 }
+    ];
+
+    // Waveform Buffers (100 Sa/s, 240 samples in ring)
+    const bufferLen = 240;
+    const rawWaveform = new Float32Array(bufferLen);
+    const filtWaveform = new Float32Array(bufferLen);
+
+    // STA/LTA Energy state
+    let staEnergy = 0.05;
+    let ltaEnergy = 0.04;
+    let currentStaLta = 1.25;
+
+    // Alerts collection
+    let alertsLog = [
+      {
+        id: "ECH-8902",
+        time: "10:14:22.450",
+        type: "Surface Explosion",
+        agency: "NTRO",
+        agencyColor: "text-rose-400 bg-rose-950/60 border-rose-800",
+        amplitude: "38.5 mPa",
+        staLta: "4.85",
+        azimuth: "048.2°",
+        cep: "380 m",
+        delays: "+24.2ms / +18.6ms"
+      },
+      {
+        id: "ECH-8901",
+        time: "09:48:10.120",
+        type: "Rocket Launch",
+        agency: "ISRO",
+        agencyColor: "text-cyan-400 bg-cyan-950/60 border-cyan-800",
+        amplitude: "24.1 mPa",
+        staLta: "4.12",
+        azimuth: "112.5°",
+        cep: "460 m",
+        delays: "+38.4ms / -12.1ms"
+      },
+      {
+        id: "ECH-8900",
+        time: "08:30:05.980",
+        type: "Severe Storm",
+        agency: "IMD",
+        agencyColor: "text-amber-400 bg-amber-950/60 border-amber-800",
+        amplitude: "14.8 mPa",
+        staLta: "3.92",
+        azimuth: "275.0°",
+        cep: "850 m",
+        delays: "-19.5ms / +22.0ms"
+      }
+    ];
+
+    // Canvases
+    const scopeCanvas = document.getElementById('oscilloscopeCanvas');
+    const scopeCtx = scopeCanvas.getContext('2d');
+    const psdCanvas = document.getElementById('psdCanvas');
+    const psdCtx = psdCanvas.getContext('2d');
+    const radarCanvas = document.getElementById('radarCanvas');
+    const radarCtx = radarCanvas.getContext('2d');
+
+    function resizeCanvases() {
+      [scopeCanvas, psdCanvas, radarCanvas].forEach(c => {
+        c.width = c.clientWidth * window.devicePixelRatio;
+        c.height = c.clientHeight * window.devicePixelRatio;
+      });
+    }
+    window.addEventListener('resize', resizeCanvases);
+
+    // Setup Scenario Injection
+    window.injectScenario = function(type) {
+      currentEvent = type;
+      eventTime = 0.0;
+      wavefrontRadiusKm = 0.0;
+      document.getElementById('current-event-label').textContent = type.replace('_', ' ');
+
+      // Update button styling
+      document.querySelectorAll('.scenario-btn').forEach(btn => {
+        if (btn.dataset.id === type) {
+          btn.className = "scenario-btn p-2.5 rounded-lg border border-cyan-500/80 bg-cyan-500/20 text-left transition";
+        } else {
+          btn.className = "scenario-btn p-2.5 rounded-lg border border-slate-800 bg-slate-900 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-left transition";
+        }
+      });
+    };
+
+    window.setScopeMode = function(mode) {
+      scopeMode = mode;
+      ['dual', 'raw', 'filt'].forEach(m => {
+        const btn = document.getElementById('scope-btn-' + m);
+        if (mode.toLowerCase() === m) {
+          btn.className = "px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500 font-bold";
+        } else {
+          btn.className = "px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700";
+        }
+      });
+    };
+
+    // Sliders
+    document.getElementById('slider-threshold').addEventListener('input', (e) => {
+      threshold = parseFloat(e.target.value);
+      document.getElementById('threshold-val').textContent = threshold.toFixed(2);
+      document.getElementById('stalta-badge').textContent = (currentStaLta >= threshold ? "TRIGGER ARMED" : "STANDBY") + ` [> ${threshold.toFixed(1)}]`;
+    });
+    document.getElementById('slider-wind').addEventListener('input', (e) => {
+      windNoiseGain = parseFloat(e.target.value);
+      document.getElementById('wind-val').textContent = windNoiseGain.toFixed(1) + 'x';
+    });
+
+    // Top buttons
+    document.getElementById('btn-toggle-sim').addEventListener('click', () => {
+      isRunning = !isRunning;
+      document.getElementById('btn-toggle-sim').textContent = isRunning ? "PAUSE" : "RESUME";
+    });
+    document.getElementById('btn-speed-toggle').addEventListener('click', () => {
+      simSpeed = simSpeed === 1.0 ? 2.0 : 1.0;
+      document.getElementById('btn-speed-toggle').textContent = simSpeed.toFixed(0) + "X SPEED";
+    });
+    document.getElementById('btn-reset-sim').addEventListener('click', () => {
+      simTime = 0.0;
+      eventTime = 0.0;
+      wavefrontRadiusKm = 0.0;
+      rawWaveform.fill(0);
+      filtWaveform.fill(0);
+    });
+
+    // Radar Click Tap
+    radarCanvas.addEventListener('click', (e) => {
+      const rect = radarCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const w = rect.width;
+      const h = rect.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const mapSpanKm = 25.0;
+      const pixelsPerKm = (w / 2) / mapSpanKm;
+
+      sourceXKm = (clickX - cx) / pixelsPerKm;
+      sourceYKm = -(clickY - cy) / pixelsPerKm;
+      wavefrontRadiusKm = 0.0;
+      eventTime = 0.0;
+    });
+
+    // Render Table
+    function renderAlertsTable() {
+      const tbody = document.getElementById('alerts-table-body');
+      tbody.innerHTML = '';
+      alertsLog.forEach(a => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-900/50 transition";
+        tr.innerHTML = `
+          <td class="p-2.5 text-slate-400 font-mono">${a.time}</td>
+          <td class="p-2.5 font-bold font-mono text-slate-100">${a.type}</td>
+          <td class="p-2.5"><span class="px-1.5 py-0.5 rounded border text-[9px] font-bold ${a.agencyColor}">${a.agency}</span></td>
+          <td class="p-2.5 text-cyan-400 font-bold">${a.amplitude}</td>
+          <td class="p-2.5 text-rose-400 font-bold">${a.staLta}</td>
+          <td class="p-2.5 text-amber-400 font-bold">${a.azimuth}</td>
+          <td class="p-2.5 text-slate-300">${a.cep}</td>
+          <td class="p-2.5 text-slate-400">${a.delays}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('alerts-count-badge').textContent = `${alertsLog.length} DETECTIONS`;
+    }
+
+    window.clearAlerts = function() {
+      alertsLog = [];
+      renderAlertsTable();
+    };
+
+    window.exportAlerts = function(format) {
+      if (format === 'json') {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(alertsLog, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = "project_echo_detections.json";
+        a.click();
+      } else {
+        let csv = "ID,Time,Type,Agency,Amplitude,STA_LTA,Azimuth,CEP,Delays\n";
+        alertsLog.forEach(item => {
+          csv += `${item.id},${item.time},${item.type},${item.agency},${item.amplitude},${item.staLta},${item.azimuth},${item.cep},${item.delays}\n`;
+        });
+        const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = "project_echo_detections.csv";
+        a.click();
+      }
+    };
+
+    // --- Main Simulation Loop ---
+    let lastStamp = performance.now();
+
+    function loop(timestamp) {
+      const deltaSec = ((timestamp - lastStamp) / 1000.0) * simSpeed;
+      lastStamp = timestamp;
+
+      if (isRunning && deltaSec > 0 && deltaSec < 0.2) {
+        simTime += deltaSec;
+        eventTime += deltaSec;
+        wavefrontRadiusKm += (SOUND_SPEED / 1000.0) * deltaSec;
+        if (wavefrontRadiusKm > 35.0) wavefrontRadiusKm = 0.0;
+
+        // Calculate arrival delays to nodes
+        nodes.forEach(n => {
+          const distKm = Math.sqrt(Math.pow(sourceXKm - n.xKm, 2) + Math.pow(sourceYKm - n.yKm, 2));
+          n.delay = (distKm * 1000.0) / SOUND_SPEED; // delay in seconds
+        });
+        const dtAB = (nodes[0].delay - nodes[1].delay) * 1000.0; // ms
+        const dtAC = (nodes[0].delay - nodes[2].delay) * 1000.0; // ms
+
+        document.getElementById('node-a-delay').textContent = "+0.0 ms";
+        document.getElementById('node-b-delay').textContent = (dtAB >= 0 ? "+" : "") + dtAB.toFixed(1) + " ms";
+        document.getElementById('node-c-delay').textContent = (dtAC >= 0 ? "+" : "") + dtAC.toFixed(1) + " ms";
+
+        document.getElementById('radar-dt-ab').textContent = (dtAB >= 0 ? "+" : "") + dtAB.toFixed(1) + " ms";
+        document.getElementById('radar-dt-ac').textContent = (dtAC >= 0 ? "+" : "") + dtAC.toFixed(1) + " ms";
+
+        // Bearing calculation from origin
+        let bearingDeg = Math.atan2(sourceXKm, sourceYKm) * (180.0 / Math.PI);
+        if (bearingDeg < 0) bearingDeg += 360.0;
+        document.getElementById('radar-bearing').textContent = Math.round(bearingDeg).toString().padStart(3, '0') + "°";
+
+        // Generate synthetic infrasound wave sample
+        let signalMpa = 0.0;
+        if (currentEvent === 'SURFACE_EXPLOSION') {
+          const envelope = Math.exp(-eventTime * 1.5);
+          signalMpa = 42.0 * envelope * Math.sin(2.0 * Math.PI * 1.2 * eventTime);
+        } else if (currentEvent === 'ROCKET_LAUNCH') {
+          const freq = 0.8 + (eventTime * 0.4) % 3.2;
+          const envelope = Math.sin(Math.min(eventTime * 0.5, Math.PI / 2));
+          signalMpa = 28.0 * envelope * Math.sin(2.0 * Math.PI * freq * eventTime);
+        } else if (currentEvent === 'STORM_FRONT') {
+          signalMpa = 18.0 * Math.sin(2.0 * Math.PI * 0.22 * eventTime) + 6.0 * Math.sin(2.0 * Math.PI * 0.15 * eventTime);
+        } else if (currentEvent === 'LANDSLIDE') {
+          const envelope = Math.sin(Math.min(eventTime * 0.8, Math.PI / 2));
+          signalMpa = 22.0 * envelope * (Math.sin(2.0 * Math.PI * 2.1 * eventTime) + 0.5 * Math.sin(2.0 * Math.PI * 4.8 * eventTime));
+        } else {
+          // Ambient
+          signalMpa = (Math.random() - 0.5) * 4.0;
+        }
+
+        // Wind turbulence swings (Raw Pa)
+        const windTurbulence = (Math.sin(simTime * 0.8) * 1.2 + Math.sin(simTime * 1.7) * 0.8 + (Math.random() - 0.5) * 0.5) * windNoiseGain;
+        const rawPa = windTurbulence + (signalMpa / 1000.0);
+
+        // Update ring buffers
+        for (let i = 0; i < bufferLen - 1; i++) {
+          rawWaveform[i] = rawWaveform[i + 1];
+          filtWaveform[i] = filtWaveform[i + 1];
+        }
+        rawWaveform[bufferLen - 1] = rawPa;
+        filtWaveform[bufferLen - 1] = signalMpa;
+
+        document.getElementById('val-raw-pa').textContent = (rawPa >= 0 ? "+" : "") + rawPa.toFixed(2) + " Pa";
+        document.getElementById('val-filt-mpa').textContent = (signalMpa >= 0 ? "+" : "") + signalMpa.toFixed(1) + " mPa";
+
+        // STA / LTA calculation
+        const instEnergy = Math.abs(signalMpa);
+        staEnergy = 0.15 * instEnergy + (1 - 0.15) * staEnergy;
+        ltaEnergy = 0.015 * instEnergy + (1 - 0.015) * ltaEnergy;
+        currentStaLta = Math.max(0.2, staEnergy / Math.max(0.01, ltaEnergy));
+
+        // Trigger logic
+        const triggerArmed = currentStaLta >= threshold;
+        if (triggerArmed && !isTriggered) {
+          // Log detection event
+          const date = new Date();
+          const timeStr = date.toTimeString().split(' ')[0] + '.' + Math.floor(date.getMilliseconds());
+          alertsLog.unshift({
+            id: "ECH-" + Math.floor(1000 + Math.random() * 9000),
+            time: timeStr,
+            type: currentEvent.replace('_', ' '),
+            agency: currentEvent === 'SURFACE_EXPLOSION' ? 'NTRO' : currentEvent === 'ROCKET_LAUNCH' ? 'ISRO' : currentEvent === 'STORM_FRONT' ? 'IMD' : 'NDMA',
+            agencyColor: currentEvent === 'SURFACE_EXPLOSION' ? 'text-rose-400 bg-rose-950/60 border-rose-800' : 'text-cyan-400 bg-cyan-950/60 border-cyan-800',
+            amplitude: Math.abs(signalMpa).toFixed(1) + " mPa",
+            staLta: currentStaLta.toFixed(2),
+            azimuth: Math.round(bearingDeg).toString().padStart(3, '0') + "°",
+            cep: Math.round(350 + Math.random() * 150) + " m",
+            delays: (dtAB >= 0 ? "+" : "") + dtAB.toFixed(1) + "ms / " + (dtAC >= 0 ? "+" : "") + dtAC.toFixed(1) + "ms"
+          });
+          if (alertsLog.length > 20) alertsLog.pop();
+          renderAlertsTable();
+        }
+        isTriggered = triggerArmed;
+
+        // UI trigger indicators
+        document.getElementById('scope-trigger-badge').className = isTriggered ? 
+          "absolute top-2 right-2 px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500 text-rose-400 font-mono text-[10px] font-bold animate-pulse" : "hidden";
+        
+        document.getElementById('stalta-num').textContent = currentStaLta.toFixed(2);
+        document.getElementById('stalta-num').className = "text-2xl font-black font-mono " + (isTriggered ? "text-rose-400" : "text-slate-100");
+        document.getElementById('stalta-badge').className = "px-2 py-0.5 rounded text-[10px] font-bold font-mono " + (isTriggered ? "bg-rose-950 text-rose-400 border border-rose-800 animate-pulse" : "bg-emerald-950 text-emerald-400 border border-emerald-800");
+        document.getElementById('stalta-badge').textContent = (isTriggered ? "TRIGGER ARMED" : "STANDBY") + ` [${isTriggered ? ">" : "<"} ${threshold.toFixed(1)}]`;
+
+        const deltaDiff = currentStaLta - threshold;
+        document.getElementById('stalta-delta').textContent = (deltaDiff >= 0 ? "+" : "") + deltaDiff.toFixed(2) + (deltaDiff >= 0 ? " (EXCEEDED)" : " (SAFE)");
+        document.getElementById('stalta-delta').className = deltaDiff >= 0 ? "text-rose-400 font-bold" : "text-emerald-400 font-bold";
+
+        // Gauge arc offset
+        const maxRatio = 8.0;
+        const normRatio = Math.min(1.0, currentStaLta / maxRatio);
+        const dashoffset = 172 - (normRatio * 172);
+        document.getElementById('stalta-arc').setAttribute('stroke-dashoffset', dashoffset.toString());
+      }
+
+      drawScope();
+      drawPsd();
+      drawRadar();
+
+      requestAnimationFrame(loop);
+    }
+
+    // Draw Oscilloscope Canvas
+    function drawScope() {
+      const w = scopeCanvas.width;
+      const h = scopeCanvas.height;
+      scopeCtx.clearRect(0, 0, w, h);
+
+      // Grid
+      scopeCtx.strokeStyle = "rgba(0, 242, 254, 0.1)";
+      scopeCtx.lineWidth = 1;
+      const xDivs = 10;
+      for (let i = 0; i <= xDivs; i++) {
+        const x = (w / xDivs) * i;
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(x, 0);
+        scopeCtx.lineTo(x, h);
+        scopeCtx.stroke();
+      }
+      const yDivs = 6;
+      for (let i = 0; i <= yDivs; i++) {
+        const y = (h / yDivs) * i;
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(0, y);
+        scopeCtx.lineTo(w, y);
+        scopeCtx.stroke();
+      }
+
+      // Center baseline
+      scopeCtx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+      scopeCtx.beginPath();
+      scopeCtx.moveTo(0, h / 2);
+      scopeCtx.lineTo(w, h / 2);
+      scopeCtx.stroke();
+
+      const midY = h / 2;
+
+      // CH1 Raw (Red/Rose)
+      if (scopeMode === 'DUAL' || scopeMode === 'RAW') {
+        scopeCtx.strokeStyle = "#EF4444";
+        scopeCtx.lineWidth = 2 * window.devicePixelRatio;
+        scopeCtx.beginPath();
+        const maxPa = 3.0;
+        for (let i = 0; i < bufferLen; i++) {
+          const x = (i / (bufferLen - 1)) * w;
+          const normY = Math.max(-1, Math.min(1, rawWaveform[i] / maxPa));
+          const y = midY - normY * (h * 0.42);
+          if (i === 0) scopeCtx.moveTo(x, y); else scopeCtx.lineTo(x, y);
+        }
+        scopeCtx.stroke();
+      }
+
+      // CH2 Filtered Coherent (Cyan)
+      if (scopeMode === 'DUAL' || scopeMode === 'FILT') {
+        scopeCtx.strokeStyle = "#00F2FE";
+        scopeCtx.lineWidth = 2.5 * window.devicePixelRatio;
+        scopeCtx.shadowColor = "#00F2FE";
+        scopeCtx.shadowBlur = 6;
+        scopeCtx.beginPath();
+        const maxMpa = 60.0;
+        for (let i = 0; i < bufferLen; i++) {
+          const x = (i / (bufferLen - 1)) * w;
+          const normY = Math.max(-1, Math.min(1, filtWaveform[i] / maxMpa));
+          const y = midY - normY * (h * 0.42);
+          if (i === 0) scopeCtx.moveTo(x, y); else scopeCtx.lineTo(x, y);
+        }
+        scopeCtx.stroke();
+        scopeCtx.shadowBlur = 0;
+      }
+    }
+
+    // Draw Welch PSD
+    function drawPsd() {
+      const w = psdCanvas.width;
+      const h = psdCanvas.height;
+      psdCtx.clearRect(0, 0, w, h);
+
+      const binsCount = 28;
+      const barSpacing = 4 * window.devicePixelRatio;
+      const barWidth = (w - (binsCount - 1) * barSpacing) / binsCount;
+
+      let peakFreq = 1.2;
+      if (currentEvent === 'ROCKET_LAUNCH') peakFreq = 2.4;
+      if (currentEvent === 'STORM_FRONT') peakFreq = 0.22;
+      if (currentEvent === 'LANDSLIDE') peakFreq = 3.5;
+
+      for (let i = 0; i < binsCount; i++) {
+        const freq = 0.05 + Math.pow(i / binsCount, 2.2) * 20.0;
+        const dist = Math.abs(freq - peakFreq);
+        let powerDb = -25.0 + Math.exp(-dist * 1.4) * 58.0 + (Math.random() - 0.5) * 4.0;
+        if (currentEvent === 'AMBIENT_BASELINE') powerDb = -20.0 + (Math.random() - 0.5) * 6.0;
+
+        const normH = Math.max(0.04, Math.min(1.0, (powerDb + 35.0) / 75.0));
+        const barH = normH * h;
+        const x = i * (barWidth + barSpacing);
+        const y = h - barH;
+
+        const grad = psdCtx.createLinearGradient(0, y, 0, h);
+        if (dist < 0.3 && currentEvent !== 'AMBIENT_BASELINE') {
+          grad.addColorStop(0, '#00F2FE');
+          grad.addColorStop(1, 'rgba(0, 242, 254, 0.2)');
+        } else {
+          grad.addColorStop(0, '#8B5CF6');
+          grad.addColorStop(1, 'rgba(139, 92, 246, 0.15)');
+        }
+        psdCtx.fillStyle = grad;
+        psdCtx.fillRect(x, y, barWidth, barH);
+      }
+    }
+
+    // Draw Geospatial TDOA Radar
+    function drawRadar() {
+      const w = radarCanvas.width;
+      const h = radarCanvas.height;
+      radarCtx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const mapSpanKm = 25.0;
+      const pixelsPerKm = (w / 2) / mapSpanKm;
+
+      function kmToPx(xKm, yKm) {
+        return {
+          x: cx + xKm * pixelsPerKm,
+          y: cy - yKm * pixelsPerKm
+        };
+      }
+
+      // Range Rings
+      radarCtx.strokeStyle = "rgba(0, 242, 254, 0.15)";
+      radarCtx.lineWidth = 1;
+      radarCtx.setLineDash([4, 4]);
+      [5, 10, 15, 20].forEach(rKm => {
+        radarCtx.beginPath();
+        radarCtx.arc(cx, cy, rKm * pixelsPerKm, 0, 2 * Math.PI);
+        radarCtx.stroke();
+      });
+      radarCtx.setLineDash([]);
+
+      // Crosshairs
+      radarCtx.strokeStyle = "rgba(0, 242, 254, 0.25)";
+      radarCtx.beginPath();
+      radarCtx.moveTo(cx, 0); radarCtx.lineTo(cx, h);
+      radarCtx.moveTo(0, cy); radarCtx.lineTo(w, cy);
+      radarCtx.stroke();
+
+      // Array Baseline Triangle
+      const ptA = kmToPx(nodes[0].xKm, nodes[0].yKm);
+      const ptB = kmToPx(nodes[1].xKm, nodes[1].yKm);
+      const ptC = kmToPx(nodes[2].xKm, nodes[2].yKm);
+
+      radarCtx.fillStyle = "rgba(0, 242, 254, 0.06)";
+      radarCtx.beginPath();
+      radarCtx.moveTo(ptA.x, ptA.y);
+      radarCtx.lineTo(ptB.x, ptB.y);
+      radarCtx.lineTo(ptC.x, ptC.y);
+      radarCtx.closePath();
+      radarCtx.fill();
+
+      radarCtx.strokeStyle = "rgba(0, 242, 254, 0.4)";
+      radarCtx.setLineDash([3, 3]);
+      radarCtx.stroke();
+      radarCtx.setLineDash([]);
+
+      // Nodes markers
+      nodes.forEach(n => {
+        const pt = kmToPx(n.xKm, n.yKm);
+        radarCtx.fillStyle = n.color;
+        radarCtx.beginPath();
+        radarCtx.arc(pt.x, pt.y, 6 * window.devicePixelRatio, 0, 2 * Math.PI);
+        radarCtx.fill();
+        radarCtx.fillStyle = "#FFFFFF";
+        radarCtx.beginPath();
+        radarCtx.arc(pt.x, pt.y, 2 * window.devicePixelRatio, 0, 2 * Math.PI);
+        radarCtx.fill();
+      });
+
+      // Threat Epicenter & Wavefront
+      const sourcePt = kmToPx(sourceXKm, sourceYKm);
+
+      // Acoustic Wavefront rings
+      if (wavefrontRadiusKm > 0) {
+        radarCtx.strokeStyle = "rgba(239, 68, 68, 0.7)";
+        radarCtx.lineWidth = 2;
+        radarCtx.beginPath();
+        radarCtx.arc(sourcePt.x, sourcePt.y, wavefrontRadiusKm * pixelsPerKm, 0, 2 * Math.PI);
+        radarCtx.stroke();
+
+        if (wavefrontRadiusKm > 2.5) {
+          radarCtx.strokeStyle = "rgba(239, 68, 68, 0.35)";
+          radarCtx.lineWidth = 1;
+          radarCtx.beginPath();
+          radarCtx.arc(sourcePt.x, sourcePt.y, (wavefrontRadiusKm - 2.5) * pixelsPerKm, 0, 2 * Math.PI);
+          radarCtx.stroke();
+        }
+      }
+
+      // CEP Circle
+      const cepRadiusPx = (0.42 * pixelsPerKm);
+      radarCtx.fillStyle = "rgba(239, 68, 68, 0.15)";
+      radarCtx.beginPath();
+      radarCtx.arc(sourcePt.x, sourcePt.y, Math.max(10, cepRadiusPx), 0, 2 * Math.PI);
+      radarCtx.fill();
+
+      radarCtx.strokeStyle = "#EF4444";
+      radarCtx.setLineDash([3, 3]);
+      radarCtx.stroke();
+      radarCtx.setLineDash([]);
+
+      // Epicenter Target Cross
+      radarCtx.strokeStyle = "#EF4444";
+      radarCtx.lineWidth = 2;
+      const arm = 8 * window.devicePixelRatio;
+      radarCtx.beginPath();
+      radarCtx.moveTo(sourcePt.x - arm, sourcePt.y); radarCtx.lineTo(sourcePt.x + arm, sourcePt.y);
+      radarCtx.moveTo(sourcePt.x, sourcePt.y - arm); radarCtx.lineTo(sourcePt.x, sourcePt.y + arm);
+      radarCtx.stroke();
+
+      radarCtx.fillStyle = "#EF4444";
+      radarCtx.beginPath();
+      radarCtx.arc(sourcePt.x, sourcePt.y, 3 * window.devicePixelRatio, 0, 2 * Math.PI);
+      radarCtx.fill();
+    }
+
+    // Init
+    resizeCanvases();
+    renderAlertsTable();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Project ECHO",
+  "description": "Self-Localizing Infrasound Sensor Network & Threat Localization Simulation (SIH26144)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

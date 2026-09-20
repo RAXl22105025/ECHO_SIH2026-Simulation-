@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Sensor Array Triangle Mesh -->
+    <path
+        android:pathData="M54,34 L36,68 L72,68 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#00E5FF"
+        android:strokeAlpha="0.6"
+        android:fillColor="#00000000" />
+
+    <!-- Infrasound Acoustic Wavefronts (Cyan) -->
+    <path
+        android:pathData="M32,48 C44,38 64,38 76,48"
+        android:strokeWidth="2.5"
+        android:strokeColor="#00E5FF"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M26,42 C42,28 66,28 82,42"
+        android:strokeWidth="2.0"
+        android:strokeColor="#00F2FE"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M20,36 C40,18 68,18 88,36"
+        android:strokeWidth="1.5"
+        android:strokeColor="#10B981"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Three Nodes (Alpha, Bravo, Charlie) -->
+    <!-- Node Alpha (Top) -->
+    <path
+        android:pathData="M54,34m-4.5,0a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"
+        android:fillColor="#00E5FF" />
+    <path
+        android:pathData="M54,34m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Node Bravo (Bottom Left) -->
+    <path
+        android:pathData="M36,68m-4.5,0a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"
+        android:fillColor="#10B981" />
+    <path
+        android:pathData="M36,68m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Node Charlie (Bottom Right) -->
+    <path
+        android:pathData="M72,68m-4.5,0a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0"
+        android:fillColor="#10B981" />
+    <path
+        android:pathData="M72,68m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Threat / Center Epicenter Target Crosshair -->
+    <path
+        android:pathData="M54,54m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0"
+        android:fillColor="#F43F5E" />
+    <path
+        android:pathData="M54,49 L54,46 M54,59 L54,62 M49,54 L46,54 M59,54 L62,54"
+        android:strokeWidth="1.5"
+        android:strokeColor="#F43F5E"
+        android:strokeLineCap="round" />
+</vector>
